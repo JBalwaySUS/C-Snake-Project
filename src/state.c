@@ -337,8 +337,30 @@ game_state_t* load_board(FILE* fp) {
   load_state->board = (char**) malloc (sizeof(char*));
   load_state->board[0] = (char*) malloc (sizeof(char));
 
-  load_state->num_rows = 0;
-  return NULL;
+  char c;
+  unsigned int i = 0;
+  unsigned int j = 0;
+  while((c = (char) fgetc(fp)) != EOF){
+    if(c == '\n'){
+      load_state->board[i][j] = '\n';
+      j++;
+      load_state->board[i] = (char*) realloc (load_state->board[i], (j+1)*sizeof(char));
+      load_state->board[i][j] = '\0';
+      i++;
+      j = 0;
+      load_state->board = (char**) realloc (load_state->board, (i+1)*sizeof(char*));
+      load_state->board[i] = (char*) malloc (sizeof(char));
+    }
+    else{
+      load_state->board[i][j] = c;
+      j++;
+      load_state->board[i] = (char*) realloc (load_state->board[i], (j+1)*sizeof(char));
+    }
+  }
+
+  load_state->num_rows = i;
+
+  return load_state;
 }
 
 /*
@@ -351,11 +373,45 @@ game_state_t* load_board(FILE* fp) {
 */
 static void find_head(game_state_t* state, unsigned int snum) {
   // TODO: Implement this function.
+  unsigned int x = state->snakes[snum].tail_row;
+  unsigned int y = state->snakes[snum].tail_col;
+  char c = state->board[x][y];
+
+  while(!is_head(c)){
+    x = get_next_row(x, c);
+    y = get_next_col(y, c);
+    c = get_board_at(state, x, y);
+  }
+
+  state->snakes[snum].head_row = x;
+  state->snakes[snum].head_col = y;
+
   return;
 }
 
 /* Task 6.2 */
 game_state_t* initialize_snakes(game_state_t* state) {
   // TODO: Implement this function.
-  return NULL;
+  state->num_snakes = 0;
+  state->snakes = (snake_t*) malloc (sizeof(snake_t));
+
+  for(unsigned int i=0; i<state->num_rows; i++){
+    for(unsigned int j=0; j<strlen(state->board[i]); j++){
+      if(is_tail(get_board_at(state, i, j))){
+        state->snakes = (snake_t*) realloc (state->snakes, (state->num_snakes+1) * sizeof(snake_t));
+        state->snakes[state->num_snakes].tail_row = i;
+        state->snakes[state->num_snakes].tail_col = j;
+        find_head(state, state->num_snakes);
+        if(get_board_at(state, state->snakes[state->num_snakes].head_row, state->snakes[state->num_snakes].head_col) == 'x'){
+          state->snakes[state->num_snakes].live = false;
+        }
+        else{
+          state->snakes[state->num_snakes].live = true;
+        }
+        state->num_snakes++;
+      }
+    }
+  }
+  
+  return state;
 }
